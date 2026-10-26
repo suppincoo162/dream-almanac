@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本地相册已满 · 原件上云</title>
+<style>
+:root{
+  --bg:#070617; --ink:#F4F1FF; --dim:#A9A3C9; --line:rgba(244,241,255,.12);
+  --p1:#6D5BFF; --cy:#38D9E8; --pk:#F2A7E3; --warn:#FF7A9C;
+  --paper:#F7F6FA; --ink-paper:#1A1826; --dim-paper:#5F5B74;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);overflow-x:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:
+  radial-gradient(900px 620px at 74% -8%,rgba(109,91,255,.5),transparent 66%),
+  radial-gradient(720px 520px at 10% 26%,rgba(46,42,143,.6),transparent 70%),
+  radial-gradient(820px 620px at 88% 88%,rgba(56,217,232,.16),transparent 70%)}
+.blob{position:absolute;width:56vw;height:56vw;border-radius:50%;filter:blur(90px);
+  mix-blend-mode:screen;opacity:.45;will-change:transform}
+.b1{background:radial-gradient(circle,rgba(109,91,255,.9),transparent 70%);top:-18vw;left:-14vw;
+  animation:da 26s ease-in-out infinite alternate}
+.b2{background:radial-gradient(circle,rgba(56,217,232,.65),transparent 70%);bottom:-24vw;right:-18vw;
+  animation:db 36s ease-in-out infinite alternate}
+@keyframes da{to{transform:translate3d(7vw,5vw,0) scale(1.12)}}
+@keyframes db{to{transform:translate3d(-5vw,-7vw,0) scale(1.08)}}
+.grain{position:absolute;inset:0;opacity:.05;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")}
+
+.hud{position:fixed;top:0;left:0;right:0;z-index:9;display:flex;align-items:center;gap:14px;
+  padding:14px 20px;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;
+  color:var(--dim);background:linear-gradient(180deg,rgba(7,6,23,.9),rgba(7,6,23,0))}
+.meter{flex:1;height:2px;border-radius:2px;background:rgba(244,241,255,.16);overflow:hidden}
+.meter i{display:block;height:100%;width:98.7%;background:linear-gradient(90deg,var(--p1),var(--warn))}
+.hud v{color:var(--ink);font-variant-numeric:tabular-nums;min-width:118px;text-align:right}
+
+main{position:relative;z-index:1}
+section{padding:96px 24px}
+.wrap{width:100%;max-width:1120px;margin:0 auto}
+.kicker{font:11px/1.7 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--dim);margin:0}
+h1{font-family:Georgia,"Songti SC",serif;font-weight:400;margin:0;
+  font-size:clamp(44px,7vw,98px);line-height:1.03;letter-spacing:-.02em;
+  background:linear-gradient(112deg,#FFF 0%,#C9C2FF 40%,#9FE9F3 70%,#F2A7E3 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font-family:Georgia,"Songti SC",serif;font-weight:400;font-size:clamp(22px,2.6vw,30px);margin:0}
+.mono{font:12px/1.8 ui-monospace,Menlo,monospace;color:var(--dim);margin:0}
+.lede{font-size:clamp(14px,1.6vw,16px);line-height:1.85;color:#D8D3F5;margin:14px 0 0;max-width:56ch}
+
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative}
+.hero .halo{position:absolute;left:-6%;top:6%;width:min(540px,68vw);height:min(340px,44vw);
+  border-radius:50%;filter:blur(70px);opacity:.45;z-index:-1;pointer-events:none;
+  background:conic-gradient(from 140deg,rgba(109,91,255,.62),rgba(56,217,232,.3),rgba(242,167,227,.5),rgba(109,91,255,.62));
+  animation:spin 36s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hero-in{display:flex;flex-direction:column;gap:18px;position:relative;isolation:isolate}
+.hero .bar{margin-top:30px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;padding:13px 26px;border-radius:999px;
+  font:12px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-align:center;transition:.22s}
+.btn.solid{background:var(--ink);color:#0B0820}
+.btn.solid:hover{transform:translateY(-1px)}
+.btn.ghost{border:1px solid rgba(169,163,201,.45);color:var(--dim)}
+.btn.ghost:hover{color:var(--ink);border-color:rgba(244,241,255,.6)}
+.btn[disabled]{cursor:not-allowed;opacity:.35;transform:none!important}
+
+.pool-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.need{font:12px/1.6 ui-monospace,Menlo,monospace;color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+.card{position:relative;border-radius:16px;overflow:hidden;background:rgba(18,14,46,.6);
+  border:1px solid var(--line);display:flex;flex-direction:column;
+  opacity:0;transform:translateY(20px);
+  transition:opacity .55s ease,transform .55s ease,border-color .25s,background .25s,border-style .25s}
+.card.in{opacity:1;transform:none}
+.card:hover{border-color:rgba(244,241,255,.26)}
+.shot{position:relative;aspect-ratio:4/3;overflow:hidden;background:linear-gradient(150deg,#241d52,#101033)}
+.shot img{width:100%;height:100%;object-fit:cover;display:block;transition:.45s ease}
+.card:hover .shot img{transform:scale(1.04)}
+.shot::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(11,8,32,.72))}
+.tag{position:absolute;left:12px;bottom:10px;z-index:2;
+  font:11px/1.5 ui-monospace,Menlo,monospace;color:#F4F1FF;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+.card-body{padding:14px 15px 16px;display:flex;flex-direction:column;gap:6px}
+.card-title{font-size:15px;line-height:1.5}
+.card-meta{font:11px/1.6 ui-monospace,Menlo,monospace;color:var(--dim)}
+.lastopen{font:11px/1.6 ui-monospace,Menlo,monospace;color:#8B86A8}
+
+.confirm{position:absolute;inset:0;z-index:3;background:rgba(8,6,24,.93);
+  display:flex;flex-direction:column;justify-content:center;gap:12px;padding:18px;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.card.asking .confirm{opacity:1;pointer-events:auto}
+.confirm p{margin:0;font-size:13px;line-height:1.7;color:#E4DFFF}
+.confirm .warn-line{color:var(--warn);font-size:12px}
+.confirm .btns{display:flex;gap:10px;flex-wrap:wrap}
+.confirm .btn{padding:10px 16px;font-size:11px}
+
+.card.gone{border-style:dashed;border-color:rgba(169,163,201,.28);background:rgba(11,8,30,.45)}
+.card.gone .shot img{display:none}
+.card.gone .shot{background:
+  repeating-linear-gradient(45deg,rgba(244,241,255,.045) 0 7px,transparent 7px 14px),
+  linear-gradient(150deg,#141130,#0B0820)}
+.card.gone .shot::after{background:none;content:"已从本机删除";position:absolute;inset:auto 0 46%;z-index:2;
+  text-align:center;font:11px/1 ui-monospace,Menlo,monospace;letter-spacing:.16em;color:rgba(244,241,255,.55)}
+.card.gone .tag{display:none}
+.card.gone .card-title{color:#8B86A8}
+.card.gone .card-meta{color:#6E688A}
+.card.gone .confirm{display:none}
+
+.summary{margin-top:34px;padding-top:22px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+#selText{font:13px/1.6 ui-monospace,Menlo,monospace;color:var(--ink);margin:0}
+#selHint{font:12px/1.6 ui-monospace,Menlo,monospace;color:var(--warn);margin:4px 0 0}
+
+.gate{position:fixed;inset:0;z-index:40;background:rgba(4,3,14,.94);
+  display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
+.gate-in{width:min(560px,100%);display:flex;flex-direction:column;gap:14px;text-align:center}
+.gate-in img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;display:block}
+.gate-last{font:11px/1.6 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--warn);margin:0}
+.gate-title{font-family:Georgia,"Songti SC",serif;font-size:clamp(20px,3vw,26px);margin:0}
+.gate-copy{font-size:13px;line-height:1.8;color:#C8C2E8;margin:0}
+.gate-field{display:flex;flex-direction:column;gap:8px;text-align:left}
+.gate-field span{font-size:12px;line-height:1.6;color:var(--dim)}
+.gate-field b{color:var(--ink);font-weight:500}
+.gate-field input{all:unset;box-sizing:border-box;width:100%;padding:12px 14px;border-radius:10px;
+  border:1px solid rgba(244,241,255,.22);background:rgba(255,255,255,.05);
+  font:13px/1 -apple-system,"PingFang SC",sans-serif;color:var(--ink)}
+.gate-field input:focus{border-color:var(--cy)}
+.gate-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+#gateGo.danger{background:var(--warn);color:#20060F}
+
+.after{padding-top:20px}
+.stat2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:22px 0 0}
+.stat2 div{padding:16px 18px;border-radius:12px;background:rgba(18,14,46,.62);border:1px solid var(--line)}
+.stat2 b{display:block;font:600 22px/1.2 ui-monospace,Menlo,monospace;color:var(--ink)}
+.stat2 small{font-size:11px;line-height:1.6;color:var(--dim)}
+
+.scene{margin-top:44px;display:grid;grid-template-columns:240px 1fr;gap:28px;align-items:center}
+.phone{width:240px;aspect-ratio:9/19.5;border-radius:30px;border:1px solid rgba(244,241,255,.22);
+  padding:12px;background:linear-gradient(180deg,#12102A,#090716);position:relative;overflow:hidden;
+  box-shadow:0 40px 90px -50px rgba(0,0,0,.9)}
+.phone-top{display:flex;justify-content:space-between;font:9px/1 ui-monospace,monospace;color:#9C97B8}
+.phone-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:10px}
+.ph{aspect-ratio:1;border-radius:4px;background:linear-gradient(150deg,#2A2458,#141033);position:relative;overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:cover;filter:grayscale(.4) brightness(.55)}
+.ph.target{outline:1px solid var(--cy)}
+.ph .spin{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.spin i{width:16px;height:16px;border:2px solid rgba(244,241,255,.25);border-top-color:var(--cy);
+  border-radius:50%;display:block;animation:r 940ms linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+.phone-note{position:absolute;left:12px;right:12px;bottom:14px;padding:10px;border-radius:8px;
+  background:rgba(255,122,156,.14);border:1px solid rgba(255,122,156,.4);
+  font:10px/1.5 ui-monospace,monospace;color:#FFC2D2}
+.scene-copy h2{margin-bottom:12px}
+.scene-copy p{font-size:14px;line-height:1.95;color:#D8D3F5;margin:0 0 10px}
+.scene-quote{font-family:Georgia,"Songti SC",serif;font-size:clamp(17px,2vw,21px);line-height:1.7;color:#FFF;margin-top:16px}
+
+.mail-wrap{padding-top:60px}
+.mail{background:var(--paper);color:var(--ink-paper);border-radius:16px;overflow:hidden;
+  box-shadow:0 40px 120px -40px rgba(109,91,255,.55);
+  opacity:0;transform:translateY(26px);transition:opacity .8s ease,transform .8s ease}
+.mail.show{opacity:1;transform:none}
+.mail-top{padding:16px 22px;border-bottom:1px solid #E4E1EF;display:flex;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;font:11px/1.5 ui-monospace,Menlo,monospace;color:var(--dim-paper)}
+.mail-head{padding:22px}
+.mail-sub{font-family:Georgia,"Songti SC",serif;font-size:clamp(19px,2.3vw,25px);line-height:1.45;margin:0 0 14px}
+.mail-row{display:grid;grid-template-columns:76px 1fr;gap:10px;font-size:13px;line-height:1.7}
+.mail-row span:first-child{color:var(--dim-paper)}
+.mail-body{padding:0 22px 22px;font-size:14px;line-height:1.95;color:#2B2740}
+.mail-body p{margin:0 0 13px}
+.mail-stat{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0;
+  padding:16px;border-radius:12px;background:#ECE9F6}
+.mail-stat div{display:flex;flex-direction:column;gap:4px}
+.mail-stat b{font:600 19px/1.2 ui-monospace,Menlo,monospace;color:#111}
+.mail-stat small{font-size:11px;line-height:1.5;color:var(--dim-paper)}
+.san{display:flex;flex-direction:column;gap:10px;margin:22px 0;padding:16px 18px;
+  border-left:2px solid #6D5BFF;background:#F1EFFA}
+.san b{font-size:13px}
+.san p{margin:0;font-size:13px;line-height:1.8}
+.mail-acts{display:flex;gap:10px;flex-wrap:wrap;padding:0 22px 24px}
+.mail-acts .btn{padding:11px 18px}
+.mail-acts .solid{background:#111;color:#fff}
+.mail-acts .ghost{border-color:#C9C4DB;color:#4B4665}
+.restored{padding:0 22px 22px;font:12px/1.8 ui-monospace,Menlo,monospace;color:#1E7A4C}
+
+footer{padding:44px 24px 56px;border-top:1px solid rgba(244,241,255,.08);
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  font:11px/1.7 ui-monospace,Menlo,monospace;color:#6E688A;letter-spacing:.06em}
+footer button{all:unset;cursor:pointer;color:var(--dim)}
+footer button:hover{color:var(--ink)}
+
+@media(max-width:920px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:720px){
+  .scene{grid-template-columns:1fr;justify-items:center;text-align:left}
+  .phone{width:min(240px,72vw)}
+}
+@media(max-width:620px){
+  .grid{grid-template-columns:1fr}
+  section{padding:80px 18px}
+  .blob{filter:blur(52px)}
+  .mail-stat{grid-template-columns:1fr}
+  .stat2{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  .b1,.b2,.halo,.spin i{animation:none}
+  html{scroll-behavior:auto}
+}
+.capsule-wrap{padding:88px 0 60px}
+.capsule-wrap[hidden]{display:none}
+.cap-stat{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:26px 0 30px}
+.cap-stat div{padding:16px 18px;border-radius:12px;background:rgba(18,14,46,.62);border:1px solid var(--line)}
+.cap-stat b{display:block;font-size:22px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.cap-stat small{font:11px/1.6 ui-monospace,Menlo,monospace;color:var(--dim)}
+.dayline{display:flex;align-items:center;gap:14px;margin:8px 0 10px}
+.dayline span{font:12px/1.4 ui-monospace,Menlo,monospace;color:var(--dim);white-space:nowrap}
+.dayline b{color:var(--ink);font-size:16px}
+.bar{flex:1;height:6px;border-radius:999px;background:rgba(244,241,255,.1);overflow:hidden}
+.bar i{display:block;height:100%;width:1%;border-radius:999px;
+  background:linear-gradient(90deg,#7FE3F0,#B49BFF,#FF9BD2);transition:width 1.4s ease}
+.caplist{list-style:none;padding:0;margin:24px 0 0;display:grid;gap:8px}
+.caplist li{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:rgba(18,14,46,.4)}
+.caplist span{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--dim)}
+.caplist b{font-weight:500;font-size:13px;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><span class="blob b1"></span><span class="blob b2"></span><span class="grain"></span></div>
+
+<div class="hud">
+  <span>LOCAL / 128 GB</span>
+  <div class="meter"><i></i></div>
+  <v id="hudFree">本地可用 1.20 GB</v>
+</div>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-in">
+        <span class="halo" aria-hidden="true"></span>
+        <p class="kicker">本地 126.4 GB / 128 GB · 云端 412 GB / 2 TB</p>
+        <h1>本地已满</h1>
+        <p class="mono">空间不在云里，在你手里。删掉本机原件才能继续拍。</p>
+        <p class="lede">云盘还有 1.5 TB 空着。但照片存在云上，看的时候要联网下载。<br>现在需要腾出 200 MB 本地空间，选择权在你。</p>
+        <div class="bar">
+          <button class="btn solid" id="start">开始选择</button>
+          <button class="btn ghost" id="later">稍后提醒</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pool" id="pool">
+    <div class="wrap">
+      <div class="pool-head">
+        <div>
+          <p class="kicker">STEP 2 / 手动选择</p>
+          <h2>哪些原件可以先离开本机</h2>
+        </div>
+        <p class="need" id="needLine">已删除 0 MB / 需 200 MB</p>
+      </div>
+      <p class="lede" style="max-width:66ch">照片不会消失，会留在云端。但本机不再有原件：查看要联网下载，平均 12 秒；没网时打不开。</p>
+
+      <div class="grid" id="grid">
+        <article class="card" data-id="t1" data-mb="47" data-title="三亚 · 海边日落">
+          <div class="shot">
+            <img alt="2019 年三亚海边的日落" loading="lazy"
+              src="./assets/t1.jpg">
+            <span class="tag">2019.08.14 · 23 张</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">三亚 · 海边日落</div>
+            <div class="card-meta">本地 47 MB · 云端已备份</div>
+            <div class="lastopen">上次打开：3 年前</div>
+          </div>
+          <div class="confirm">
+            <p>从本机删除原件，云端保留。</p>
+            <p class="warn-line">之后查看需联网下载，没网时打不开。</p>
+            <div class="btns">
+              <button class="btn solid pick">从本机删除</button>
+              <button class="btn ghost keep">留下</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card" data-id="t2" data-mb="120" data-title="敦煌 · 沙漠星空">
+          <div class="shot">
+            <img alt="2021 年敦煌沙漠的星空" loading="lazy"
+              src="./assets/t2.jpg">
+            <span class="tag">2021.07.23 · 38 张</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">敦煌 · 沙漠星空</div>
+            <div class="card-meta">本地 120 MB · 云端已备份</div>
+            <div class="lastopen">上次打开：2 个月前</div>
+          </div>
+          <div class="confirm">
+            <p>从本机删除原件，云端保留。</p>
+            <p class="warn-line">之后查看需联网下载，没网时打不开。</p>
+            <div class="btns">
+              <button class="btn solid pick">从本机删除</button>
+              <button class="btn ghost keep">留下</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card" data-id="t3" data-mb="6" data-title="宿舍 · 凌晨四点">
+          <div class="shot">
+            <img alt="2022 年宿舍凌晨的空书桌" loading="lazy"
+              src="./assets/t3.jpg">
+            <span class="tag">2022.04.17 · 3 张</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">宿舍 · 凌晨四点</div>
+            <div class="card-meta">本地 6 MB · 云端已备份</div>
+            <div class="lastopen">上次打开：3 年前</div>
+          </div>
+          <div class="confirm">
+            <p>从本机删除原件，云端保留。</p>
+            <p class="warn-line">之后查看需联网下载，没网时打不开。</p>
+            <div class="btns">
+              <button class="btn solid pick">从本机删除</button>
+              <button class="btn ghost keep">留下</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card" data-id="t4" data-mb="28" data-title="家 · 客厅生日">
+          <div class="shot">
+            <img alt="2023 年家里客厅的生日蛋糕" loading="lazy"
+              src="./assets/t4.jpg">
+            <span class="tag">2023.11.09 · 12 张</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">家 · 客厅生日</div>
+            <div class="card-meta">本地 28 MB · 云端已备份</div>
+            <div class="lastopen">上次打开：昨天</div>
+          </div>
+          <div class="confirm">
+            <p>从本机删除原件，云端保留。</p>
+            <p class="warn-line">之后查看需联网下载，没网时打不开。</p>
+            <div class="btns">
+              <button class="btn solid pick">从本机删除</button>
+              <button class="btn ghost keep">留下</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card" data-id="t5" data-mb="3800" data-title="毕业典礼 · 全部">
+          <div class="shot">
+            <img alt="2024 年毕业典礼合影" loading="lazy"
+              src="./assets/t5.jpg">
+            <span class="tag">2024.06.20 · 214 张 + 视频</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">毕业典礼 · 全部</div>
+            <div class="card-meta">本地 3.8 GB · 云端已备份</div>
+            <div class="lastopen">上次打开：上个月</div>
+          </div>
+          <div class="confirm">
+            <p>从本机删除原件，云端保留。</p>
+            <p class="warn-line">之后查看需联网下载，没网时打不开。</p>
+            <div class="btns">
+              <button class="btn solid pick">从本机删除</button>
+              <button class="btn ghost keep">留下</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card" data-id="t6" data-mb="96" data-title="漓江 · 阴天">
+          <div class="shot">
+            <img alt="2025 年冬天漓江的阴天" loading="lazy"
+              src="./assets/t6.jpg">
+            <span class="tag">2025.12.31 · 41 张</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">漓江 · 阴天</div>
+            <div class="card-meta">本地 96 MB · 云端已备份</div>
+            <div class="lastopen">上次打开：1 年前</div>
+          </div>
+          <div class="confirm">
+            <p>从本机删除原件，云端保留。</p>
+            <p class="warn-line">之后查看需联网下载，没网时打不开。</p>
+            <div class="btns">
+              <button class="btn solid pick">从本机删除</button>
+              <button class="btn ghost keep">留下</button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="summary">
+        <div>
+          <p id="selText">已删除 0 MB / 需 200 MB</p>
+          <p id="selHint">还差 200 MB。相机暂时无法使用。</p>
+        </div>
+        <button class="btn solid" id="finish" disabled>完成清理</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="after" id="afterSec" hidden>
+    <div class="wrap">
+      <p class="kicker">已完成 · 2026.10.24</p>
+      <div class="stat2">
+        <div><b id="freeMb">0 MB</b><small>本机释放</small></div>
+        <div><b id="cloudMb">0 MB</b><small>云端新增（原已备份，不额外计费）</small></div>
+      </div>
+
+      <div class="scene">
+        <div class="phone" aria-label="手机相册界面示意">
+          <div class="phone-top"><span>22:41</span><span>G1234 · 无服务</span></div>
+          <div class="phone-grid" id="phoneGrid"></div>
+          <div class="phone-note">当前无网络，原图在云端，无法载入</div>
+        </div>
+        <div class="scene-copy">
+          <p class="kicker">两天后 · 高铁 · 湖南段隧道</p>
+          <h2>你只是想给妈妈看一眼毕业照</h2>
+          <p id="sceneLead">照片还在你的相册里。只是它不在这台手机上。</p>
+          <p class="scene-quote">本地的那一份，是你亲手删掉的。<br>云端的那一份，此刻下载不了。</p>
+        </div>
+      </div>
+
+      <div class="summary">
+        <p id="selHint2" style="font:12px/1.6 ui-monospace,Menlo,monospace;color:var(--dim)">接下来是 365 天。</p>
+        <button class="btn solid" id="toCapsule">进入梦历 · 第 1 天</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="capsule-wrap" id="capsuleSec" hidden>
+    <div class="wrap">
+      <p class="kicker">梦历 365 · 寄存中</p>
+      <h2>这 365 天，它不在你的手机里</h2>
+      <div class="cap-stat">
+        <div><b id="capGroups">0</b><small>组原件寄存中</small></div>
+        <div><b id="capSize">0 MB</b><small>占用云端空间</small></div>
+        <div><b id="capExpiry">2027.10.24</b><small>到期解封</small></div>
+      </div>
+
+      <div class="dayline">
+        <span>第 <b id="dayNum">1</b> 天</span>
+        <div class="bar"><i id="barFill"></i></div>
+        <span>第 365 天</span>
+      </div>
+      <p class="mono" id="capNote">剩余 364 天。中途不会提醒你，直到第 358 天。</p>
+
+      <ul class="caplist" id="capList"></ul>
+
+      <div class="summary">
+        <button class="btn ghost" id="ff">快进到第 365 天（演示）</button>
+        <button class="btn solid" id="openMail" disabled>打开邮件</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="mail-wrap" id="mailSec" hidden>
+    <div class="wrap">
+      <p class="kicker">一年后 · 2027.10.24 09:00</p>
+      <div class="mail" id="mail">
+        <div class="mail-top">
+          <span>收件箱 · 1 封未读</span>
+          <span>发件人：本地空间管家</span>
+        </div>
+        <div class="mail-head">
+          <h2 class="mail-sub" id="subject">一年前，你把 2 组原件移出了本机</h2>
+          <div class="mail-row"><span>发件人</span><span>本地空间管家 &lt;local@album-capsule.app&gt;</span></div>
+          <div class="mail-row"><span>收件人</span><span>你</span></div>
+          <div class="mail-row"><span>时间</span><span>2027 年 10 月 24 日 09:00</span></div>
+        </div>
+        <div class="mail-body">
+          <p id="mailLede">一年前，你从本机删掉了 2 组原件，共 216 MB。它们在云端一直在。</p>
+
+          <div class="mail-stat">
+            <div><b id="mGroups">2</b><small>组原件不在本机</small></div>
+            <div><b id="mOpens">0</b><small>一年内你打开过</small></div>
+            <div><b id="mDays">12</b><small>腾出的空间撑了几天</small></div>
+          </div>
+
+          <p id="mailVerdict">这 2 组里，有 1 组你在过去一年一次也没想起。另外 1 组你在第 83 天找过一次，当时没有网。</p>
+
+          <p>今天可以一键把原件下载回本机。需要 <span id="mSize">216 MB</span> 本地空间，耗时约 <span id="mTime">28</span> 秒。</p>
+
+          <div class="san">
+            <b>断 · 舍 · 离</b>
+            <p>断：本地满了，你必须先做一次决定，才能继续拍。</p>
+            <p>舍：删的不是云端那份，是本机那份。你舍掉的是随时能看。</p>
+            <p>离：一年后它回来了。你会发现你需要的不是全部在手边，是知道它在哪儿、以及愿意为它等 12 秒。</p>
+          </div>
+
+          <p style="color:#5F5B74;font-size:12px;line-height:1.8">云端不是免费的抽屉：占用不额外收费，代价是每一次查看都要联网、都要等。</p>
+        </div>
+        <div class="mail-acts">
+          <button class="btn solid" id="restore">下载回本机</button>
+          <button class="btn ghost" id="renew">继续留在云端</button>
+          <button class="btn ghost" id="purge">云端永久删除</button>
+        </div>
+        <div class="restored" id="restored" hidden></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>ALBUM.CAPSULE / 概念演示 · 页面不读取、不上传任何真实照片</span>
+  <button id="top">回到顶部 ↑</button>
+</footer>
+
+<div class="gate" id="gate" hidden>
+  <div class="gate-in">
+    <p class="gate-last">这是你在本机最后一次看到它</p>
+    <img id="gateImg" alt="即将从本机删除的照片">
+    <p class="gate-title" id="gateTitle"></p>
+    <p class="gate-copy">删除后，原件只存在于云端。查看需联网下载，平均 12 秒；没网时打不开。</p>
+    <label class="gate-field">
+      <span>输入组名以确认：<b id="gateNeed"></b></span>
+      <input id="gateInput" autocomplete="off" spellcheck="false" placeholder="照抄上面的组名">
+    </label>
+    <div class="gate-btns">
+      <button class="btn solid danger" id="gateGo" disabled>删除本机原件</button>
+      <button class="btn ghost" id="gateBack">我再想想</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var NEED = 200;
+  var cards = [].slice.call(document.querySelectorAll('.card'));
+  var removed = new Map();
+  var freeBase = 1.20;
+
+  var needLine = document.getElementById('needLine');
+  var selText = document.getElementById('selText');
+  var selHint = document.getElementById('selHint');
+  var finish = document.getElementById('finish');
+  var hudFree = document.getElementById('hudFree');
+
+  var gate = document.getElementById('gate');
+  var gateImg = document.getElementById('gateImg');
+  var gateTitle = document.getElementById('gateTitle');
+  var gateNeed = document.getElementById('gateNeed');
+  var gateInput = document.getElementById('gateInput');
+  var gateGo = document.getElementById('gateGo');
+  var pending = null;
+  var KEY = 'mengli365.v1';
+  var DEMO_EXPIRY = '2027.10.24';
+
+  function markGone(card){
+    card.classList.remove('asking');
+    card.classList.add('gone');
+    card.querySelector('.card-meta').textContent = '本地已释放 ' + fmt(Number(card.dataset.mb)) + ' · 原件在云端';
+    card.querySelector('.lastopen').textContent = DEMO_EXPIRY + ' 可申请寄回';
+    removed.set(card.dataset.id, { mb: Number(card.dataset.mb), title: card.dataset.title });
+  }
+  function saveState(){
+    try{
+      var items = [];
+      removed.forEach(function(v, k){ items.push({ id: k, mb: v.mb, title: v.title }); });
+      localStorage.setItem(KEY, JSON.stringify({ items: items }));
+    }catch(e){}
+  }
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (!data || !data.items) return;
+      data.items.forEach(function(it){
+        var card = document.querySelector('.card[data-id="' + it.id + '"]');
+        if (card) markGone(card);
+      });
+    }catch(e){}
+  }
+
+  function fmt(mb){
+    return mb >= 1024 ? (mb / 1024).toFixed(2) + ' GB' : Math.round(mb) + ' MB';
+  }
+  function norm(s){
+    return (s || '').replace(/\s|·|•|-/g, '').replace(/全部|所有/g, '');
+  }
+  function total(){
+    var s = 0;
+    removed.forEach(function(v){ s += v.mb; });
+    return s;
+  }
+  function render(){
+    var s = total();
+    var enough = s >= NEED;
+    var line = '已删除 ' + fmt(s) + ' / 需 ' + fmt(NEED);
+    needLine.textContent = line;
+    selText.textContent = line;
+    selHint.textContent = enough
+      ? '已够额。可以完成清理。'
+      : '还差 ' + Math.round(NEED - s) + ' MB。相机暂时无法使用。';
+    selHint.style.color = enough ? '#9FE9F3' : '';
+    finish.disabled = !enough;
+    hudFree.textContent = '本地可用 ' + (freeBase + s / 1024).toFixed(2) + ' GB';
+  }
+
+  function openGate(card){
+    pending = card;
+    gateImg.src = card.querySelector('img').src;
+    gateImg.alt = card.dataset.title;
+    gateTitle.textContent = card.dataset.title;
+    gateNeed.textContent = card.dataset.title;
+    gateInput.value = '';
+    gateGo.disabled = true;
+    gate.hidden = false;
+    document.body.style.overflow = 'hidden';
+    setTimeout(function(){ gateInput.focus(); }, 60);
+  }
+  function closeGate(){
+    gate.hidden = true;
+    pending = null;
+    document.body.style.overflow = '';
+  }
+
+  gateInput.addEventListener('input', function(){
+    if (!pending) return;
+    gateGo.disabled = norm(gateInput.value) !== norm(pending.dataset.title);
+  });
+  gateBack.addEventListener('click', closeGate);
+  gateGo.addEventListener('click', function(){
+    if (!pending) return;
+    markGone(pending);
+    closeGate();
+    render();
+    saveState();
+  });
+
+  cards.forEach(function(card){
+    card.addEventListener('click', function(e){
+      if (card.classList.contains('gone')) return;
+      if (e.target.closest('.pick') || e.target.closest('.keep')) return;
+      card.classList.toggle('asking');
+    });
+    card.querySelector('.keep').addEventListener('click', function(e){
+      e.stopPropagation();
+      card.classList.remove('asking');
+    });
+    card.querySelector('.pick').addEventListener('click', function(e){
+      e.stopPropagation();
+      openGate(card);
+    });
+  });
+
+  if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(en){
+        if (!en.isIntersecting) return;
+        en.target.classList.add('in');
+        io.unobserve(en.target);
+      });
+    }, { threshold: .1 });
+    cards.forEach(function(c, i){
+      c.style.transitionDelay = (i % 3) * 60 + 'ms';
+      io.observe(c);
+    });
+  } else {
+    cards.forEach(function(c){ c.classList.add('in'); });
+  }
+
+  document.getElementById('start').addEventListener('click', function(){
+    document.getElementById('pool').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.getElementById('later').addEventListener('click', function(){
+    document.getElementById('pool').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.getElementById('top').addEventListener('click', function(){
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  function buildPhone(limit){
+    var grid = document.getElementById('phoneGrid');
+    var shot = document.querySelector('.card[data-id="t5"] img');
+    var html = '';
+    for (var i = 0; i < 9; i++){
+      if (i === 4){
+        html += '<div class="ph target"><img src="' + shot.src + '" alt="毕业照缩略图"><span class="spin"><i></i></span></div>';
+      } else {
+        html += '<div class="ph"></div>';
+      }
+    }
+    grid.innerHTML = html;
+    if (limit === 1){
+      document.getElementById('sceneLead').textContent =
+        '照片还在你的相册里。只是它不在这台手机上。';
+    }
+  }
+
+  finish.addEventListener('click', function(){
+    var s = total();
+    if (s < NEED) return;
+    var groups = removed.size;
+    var names = [];
+    removed.forEach(function(v){ names.push(v.title); });
+
+    document.getElementById('freeMb').textContent = fmt(s);
+    document.getElementById('cloudMb').textContent = fmt(s);
+    buildPhone(groups);
+
+    var after = document.getElementById('afterSec');
+    after.hidden = false;
+    after.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    finish.disabled = true;
+    finish.textContent = '已清理 · ' + fmt(s);
+    cards.forEach(function(c){ c.style.pointerEvents = 'none'; });
+    selHint.textContent = '清理完成。本机不再有这些原件。';
+    selHint.style.color = '#9FE9F3';
+
+    document.getElementById('subject').textContent =
+      '一年前，你把 ' + groups + ' 组原件移出了本机';
+    document.getElementById('mailLede').textContent =
+      '一年前，你从本机删掉了 ' + groups + ' 组原件，共 ' + fmt(s) + '。它们在云端一直在。';
+    document.getElementById('mGroups').textContent = groups;
+    document.getElementById('mDays').textContent = Math.max(1, Math.round(s / 18));
+    document.getElementById('mSize').textContent = fmt(s);
+    document.getElementById('mTime').textContent = Math.max(3, Math.round(s / 8));
+
+    var verdict = '这 ' + groups + ' 组里，';
+    if (groups === 1){
+      verdict += '你在过去一年一次也没想起过它。';
+    } else if (groups === 2){
+      verdict += '有 1 组你在第 83 天找过一次，当时没有网。';
+    } else {
+      verdict += '有 ' + (groups - 2) + ' 组你一次也没想起，另外 2 组各找过一次。';
+    }
+    document.getElementById('mailVerdict').textContent = verdict;
+
+    document.getElementById('capList').innerHTML = names.map(function(n){
+      return '<li><b>' + n + '</b><span>在云端 · 未解封</span></li>';
+    }).join('');
+    document.getElementById('capGroups').textContent = groups;
+    document.getElementById('capSize').textContent = fmt(s);
+    document.getElementById('capExpiry').textContent = DEMO_EXPIRY;
+    document.getElementById('dayNum').textContent = '1';
+    document.getElementById('barFill').style.width = '1%';
+
+    document.getElementById('toCapsule').addEventListener('click', function(){
+      var sec = document.getElementById('capsuleSec');
+      sec.hidden = false;
+      sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    var ff = document.getElementById('ff');
+    ff.addEventListener('click', function(){
+      ff.disabled = true;
+      ff.textContent = '第 365 天';
+      document.getElementById('barFill').style.width = '100%';
+      var n = document.getElementById('dayNum');
+      var d = 1;
+      var t = setInterval(function(){
+        d += 12;
+        if (d >= 365){
+          d = 365;
+          clearInterval(t);
+          document.getElementById('capNote').textContent = '今天到期。一封邮件已经发出。';
+          document.getElementById('openMail').disabled = false;
+        }
+        n.textContent = d;
+      }, 80);
+    });
+
+    document.getElementById('openMail').addEventListener('click', function(){
+      var sec = document.getElementById('mailSec');
+      sec.hidden = false;
+      requestAnimationFrame(function(){
+        document.getElementById('mail').classList.add('show');
+        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    document.getElementById('restore').addEventListener('click', function(){
+      var box = document.getElementById('restored');
+      box.hidden = false;
+      box.textContent = '已下载回本机 ' + groups + ' 组：' + names.join(' · ') +
+        '，共 ' + fmt(s) + '。本机可用空间回到 ' + freeBase.toFixed(2) + ' GB。';
+    });
+    document.getElementById('renew').addEventListener('click', function(){
+      var box = document.getElementById('restored');
+      box.hidden = false;
+      box.textContent = '继续留在云端。下次查看仍需联网，平均 12 秒。';
+    });
+    document.getElementById('purge').addEventListener('click', function(){
+      var box = document.getElementById('restored');
+      box.hidden = false;
+      box.style.color = '#B02A4A';
+      box.textContent = '云端原件已永久删除，共 ' + groups + ' 组 ' + fmt(s) + '。此操作不可撤回。';
+    });
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && !gate.hidden) closeGate();
+  });
+
+  loadState();
+  render();
+})();
+</script>
+</body>
+</html>
