@@ -97,6 +97,7 @@ python3 -m http.server 8000
 ```
 index.html    # 全部内容：样式、结构、交互，单文件
 assets/       # 6 张演示照片（本地，无外链）
+assets/moonlight.m4a    # 背景音乐（月光奏鸣曲第一乐章）
 README.md
 ```
 
@@ -115,6 +116,40 @@ README.md
 | 365 天时间轴与梦历页 | 解封下载进度、续期分支（第二年） |
 | 一年后邮件与三个动作 | 移动端 375px 实机验证 |
 | `localStorage` 状态持久化 | 真实相册接入、后端、真实邮件服务、定价页 |
+
+---
+
+## 背景音乐与版权
+
+页面背景音乐为贝多芬《钢琴奏鸣曲第 14 号》升 c 小调 Op. 27 No. 2（俗称「月光」）**第一乐章 Adagio sostenuto（持续的柔板）**，5 分 05 秒，循环播放。
+
+**曲目与录音是两件事，版权状态不同：**
+
+| 对象 | 权利状态 | 说明 |
+|---|---|---|
+| 乐曲本身（作曲） | 公有领域（public domain） | 贝多芬 1827 年去世，原作早已不受著作权保护，任何人可自由演奏、录制、改编 |
+| 本仓库使用的这段录音 | CC BY-SA 4.0（署名—相同方式共享 4.0 国际） | 著作权归演奏者/上传者，**不属于**公有领域，使用需遵守许可条款 |
+
+**录音来源**
+
+- 文件：`Beethoven - Moonlight Sonata Op-27 No-2 Mvt-1. (Piano Performance by eldüendesüarez)wav.wav`
+- 出处：[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Beethoven_-_Moonlight_Sonata_Op-27_No-2_Mvt-1._(Piano_Performance_by_eld%C3%BCendes%C3%BCarez)wav.wav)
+- 演奏者 / 上传者：eldüendesüarez
+- 许可协议：[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans)
+- 原始文件：51 MB WAV，16 bit / 44.1 kHz 立体声
+
+**本仓库对该录音所做的改动**：仅格式转换（WAV → AAC / m4a，macOS 自带 `afconvert`，目标码率 128 kbps，输出 4.1 MB），未剪接、未混音、未改变音高与速度。依 CC BY-SA 4.0 的「相同方式共享」条款，转换后的 `assets/moonlight.m4a` 也以 CC BY-SA 4.0 提供。
+
+**使用与再分发的义务**
+
+1. **署名**：必须保留作品名、演奏者（eldüendesüarez）、来源链接、许可协议链接，并说明是否做过改动（本仓库做过格式转换）。
+2. **相同方式共享**：若对外分发包含该录音的衍生版本，衍生版本须以相同或兼容的协议授权。
+3. **不得附加额外限制**：不得对该录音施加法律条款或技术措施，限制他人行使 CC BY-SA 4.0 已授予的权利。
+4. 公开部署（上线演示站、放进作品集、投递面试材料）时，应在页面上或随附说明中同步展示上述署名，不能只写在代码注释里。
+
+**若需要更宽松的分发条件**（例如商用、闭源、免署名、或需回避 ShareAlike 条款），应替换录音：到 Wikimedia Commons 或 Musopen 找 **CC0 / 公有领域**标记的版本替换 `assets/moonlight.m4a`，文件名与 `<audio id="bgm">` 的 `src` 保持不变即可，无需改动脚本。
+
+**移除音乐的方式**：删除 `assets/moonlight.m4a`，并删掉 `index.html` 中 `<audio id="bgm" …>` 一行与 `.sound` 按钮；页面其余功能不依赖音频，删除后无副作用。
 
 ---
 
