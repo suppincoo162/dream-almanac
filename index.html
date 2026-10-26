@@ -65,6 +65,13 @@ h2{font-family:Georgia,"Songti SC",serif;font-weight:400;font-size:clamp(22px,2.
 .btn.ghost:hover{color:var(--ink);border-color:rgba(244,241,255,.6)}
 .btn[disabled]{cursor:not-allowed;opacity:.35;transform:none!important}
 
+.sound{all:unset;box-sizing:border-box;position:fixed;right:18px;bottom:18px;z-index:20;cursor:pointer;
+  padding:10px 14px;border-radius:999px;border:1px solid rgba(169,163,201,.35);
+  background:rgba(11,8,30,.7);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  font:11px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;color:var(--dim);transition:.22s}
+.sound:hover{color:var(--ink);border-color:rgba(244,241,255,.5)}
+.sound[aria-pressed="true"]{color:#9FE9F3;border-color:rgba(56,217,232,.42)}
+
 .pool-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:6px}
 .need{font:12px/1.6 ui-monospace,Menlo,monospace;color:var(--warn)}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
@@ -505,6 +512,9 @@ footer button:hover{color:var(--ink)}
   <button id="top">回到顶部 ↑</button>
 </footer>
 
+<audio id="bgm" src="./assets/moonlight.m4a" loop preload="auto"></audio>
+<button class="sound" id="sound" aria-pressed="true">♪ 背景音 · 月光 · 开</button>
+
 <div class="gate" id="gate" hidden>
   <div class="gate-in">
     <p class="gate-last">这是你在本机最后一次看到它</p>
@@ -793,6 +803,54 @@ footer button:hover{color:var(--ink)}
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape' && !gate.hidden) closeGate();
   });
+
+  /* 背景音：贝多芬《月光奏鸣曲》第一乐章原版录音
+     audio 文件来源 Wikimedia Commons，演奏者 eldüendesüarez，CC BY-SA 4.0 */
+  var soundBtn = document.getElementById('sound');
+  var bgm = document.getElementById('bgm');
+  var musicOn = true, fadeTimer = null;
+  var VOL = 0.42;
+
+  function fadeTo(target, ms){
+    clearInterval(fadeTimer);
+    var steps = Math.max(1, Math.round(ms / 50)), i = 0, from = bgm.volume;
+    fadeTimer = setInterval(function(){
+      i++;
+      bgm.volume = Math.min(1, Math.max(0, from + (target - from) * i / steps));
+      if (i >= steps) clearInterval(fadeTimer);
+    }, 50);
+  }
+
+  function setMusic(on){
+    musicOn = on;
+    soundBtn.textContent = on ? '♪ 背景音 · 月光 · 开' : '♪ 背景音 · 月光 · 关';
+    soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (on){
+      bgm.volume = 0;
+      var p = bgm.play();
+      if (p && p.catch) p.catch(function(){});
+      fadeTo(VOL, 2500);
+    } else {
+      fadeTo(0, 600);
+      setTimeout(function(){ if (!musicOn) bgm.pause(); }, 680);
+    }
+  }
+
+  soundBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    setMusic(!musicOn);
+  });
+  bgm.addEventListener('error', function(){ soundBtn.hidden = true; });
+
+  /* 浏览器禁止无交互自动播放：页面首次点击或按键时起播 */
+  function firstGesture(e){
+    if (e.target && e.target.closest && e.target.closest('#sound')) return;
+    document.removeEventListener('pointerdown', firstGesture);
+    document.removeEventListener('keydown', firstGesture);
+    setMusic(true);
+  }
+  document.addEventListener('pointerdown', firstGesture);
+  document.addEventListener('keydown', firstGesture);
 
   loadState();
   render();
